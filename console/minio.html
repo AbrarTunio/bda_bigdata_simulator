@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MinIO Console</title>
+
+<!-- The browser frame below is drawn, not real. See browser-chrome.css. -->
+<link rel="stylesheet" href="css/browser-chrome.css">
+<link rel="stylesheet" href="css/minio.css">
+</head>
+
+<!--
+  Opened on its own, this page is a read-only mirror of the lab:
+  it shows whatever index.html last wrote to localStorage. The
+  lab itself does not load this file — it draws the same console
+  inside its own page as a floating window, so there is never a
+  second address bar contradicting the one on screen.
+-->
+<body data-console="minio">
+
+<div id="crRoot"></div>
+
+<script src="js/chrome.js"></script>
+<script src="js/minio.js"></script>
+<script src="js/standalone.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+/* ============================================================
+   sim-window.css — the floating browser windows.
+
+   The consoles are drawn on top of the lab rather than opened
+   as real popups, so the only address bar on screen is the one
+   we control. These rules give that drawing a window frame:
+   a shadow, rounded corners, a drag handle (the tab strip) and
+   a resize grip.
+   ============================================================ */
+
+.simwin{
+  position:fixed;z-index:500;
+  display:flex;flex-direction:column;
+  min-width:520px;min-height:360px;
+  background:#dee1e6;
+  border-radius:10px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.14), 0 24px 64px -12px rgba(8,16,40,.55),
+             0 8px 20px -8px rgba(8,16,40,.35);
+  overflow:hidden;
+  animation:simwin-in .16s ease-out;
+}
+@keyframes simwin-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+.simwin.dragging{transition:none;user-select:none}
+.simwin.dragging .cr-page{pointer-events:none}
+
+/* maximised: fill the viewport, lose the rounding */
+.simwin.max{
+  left:0 !important;top:0 !important;
+  width:100vw !important;height:100vh !important;
+  border-radius:0;
+}
+.simwin.min{display:none}
+
+.simwin .cr-root{flex:1;min-height:0;border-radius:inherit}
+.simwin .cr-tabs{cursor:default}
+.simwin:not(.max) .cr-tabs{cursor:grab}
+.simwin:not(.max).dragging .cr-tabs{cursor:grabbing}
+
+/* resize grip, bottom-right */
+.simwin-grip{
+  position:absolute;right:0;bottom:0;width:18px;height:18px;
+  cursor:nwse-resize;z-index:70;
+}
+.simwin-grip::after{
+  content:"";position:absolute;right:4px;bottom:4px;width:8px;height:8px;
+  border-right:2px solid rgba(32,33,36,.35);
+  border-bottom:2px solid rgba(32,33,36,.35);
+  border-radius:0 0 2px 0;
+}
+.simwin.max .simwin-grip{display:none}
+
+/* ---------- dock for minimised windows ---------- */
+.simdock{
+  position:fixed;left:16px;bottom:16px;z-index:499;
+  display:flex;gap:8px;align-items:center;
+}
+.simdock:empty{display:none}
+.simdock button{
+  display:flex;align-items:center;gap:8px;
+  background:#1b2436;color:#e8eaf0;border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;padding:7px 13px;font:inherit;font-size:12.5px;
+  cursor:pointer;box-shadow:0 6px 18px -6px rgba(8,16,40,.5);
+}
+.simdock button:hover{background:#273349;border-color:rgba(255,255,255,.26)}
+.simdock button svg{display:block;width:15px;height:15px;flex:0 0 auto}
+
+/* ---------- narrow screens: windows go full-bleed ---------- */
+@media (max-width:860px){
+  .simwin{
+    left:0 !important;top:0 !important;
+    width:100vw !important;height:100vh !important;
+    border-radius:0;min-width:0;
+  }
+  .simwin-grip{display:none}
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Big Data Lab Simulator — EMR / HDInsight</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Stylesheets, in cascade order: tokens first, then the shell,
+     then the pieces that sit inside it. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/terminal.css">
+<link rel="stylesheet" href="css/panels.css">
+<link rel="stylesheet" href="css/modal.css">
+<link rel="stylesheet" href="css/sim-window.css">
+
+<!-- The simulated browser and the two consoles it draws. Namespaced
+     .cr-* / .mn-* / .aw-* so they cannot leak into the lab. -->
+<link rel="stylesheet" href="console/css/browser-chrome.css">
+<link rel="stylesheet" href="console/css/minio.css">
+<link rel="stylesheet" href="console/css/aws.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="9" fill="#0e7c86"/>
+      <ellipse cx="20" cy="12" rx="11" ry="4" fill="#fff" opacity=".92"/>
+      <path d="M9 12v6c0 2.2 4.9 4 11 4s11-1.8 11-4v-6" stroke="#fff" stroke-width="2.1" opacity=".72" fill="none"/>
+      <path d="M9 18v6c0 2.2 4.9 4 11 4s11-1.8 11-4v-6" stroke="#fff" stroke-width="2.1" opacity=".5" fill="none"/>
+      <path d="M9 24v4c0 2.2 4.9 4 11 4s11-1.8 11-4v-4" stroke="#fff" stroke-width="2.1" opacity=".3" fill="none"/>
+    </svg>
+    <div class="brand-txt">
+      <h1>Big Data Lab Simulator</h1>
+      <p>Deploying managed Spark on object storage · EMR / HDInsight</p>
+    </div>
+  </div>
+  <div class="env-strip" id="envStrip">
+    <span class="chip" id="chDocker"><i class="dot"></i>Docker</span>
+    <span class="chip" id="chMinio"><i class="dot"></i>MinIO</span>
+    <span class="chip" id="chCli"><i class="dot"></i>AWS&nbsp;CLI</span>
+    <span class="chip" id="chRegion"><i class="dot"></i>no&nbsp;region</span>
+    <span class="chip cost" id="chCost"><i class="dot"></i>Session&nbsp;$0.00</span>
+    <button class="btn-reset" id="btnReset">↺ Reset</button>
+  </div>
+</header>
+
+<main class="app">
+  <!-- left rail: progress + step index -->
+  <nav class="nav">
+    <div class="nav-prog">
+      <div class="lab"><span>Progress</span><span id="progTxt">0 / 16</span></div>
+      <div class="bar"><i id="progBar"></i></div>
+    </div>
+    <div class="nav-group"><span>Setup</span><ul class="nav-list" id="navSetup"></ul></div>
+    <div class="nav-group"><span>Lab steps</span><ul class="nav-list" id="navSteps"></ul></div>
+  </nav>
+
+  <!-- centre: the current step, then the terminal -->
+  <section class="center">
+    <div class="panel" id="stepPanel"></div>
+
+    <div class="term-wrap">
+      <div class="term-head">
+        <div class="tl"><i></i><i></i><i></i></div>
+        <span class="ttl">student@bda-lab — bash</span>
+        <button class="term-clear" id="termClear">clear</button>
+      </div>
+      <div class="term" id="term"></div>
+      <div class="term-input">
+        <span class="u" id="cwdLabel">student@bda-lab:~$</span>
+        <input id="termInput" placeholder="type a command, or use the Run buttons above…" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </section>
+
+  <!-- right rail: live views of storage, compute and cost -->
+  <aside class="rail">
+    <div class="card">
+      <div class="card-head store">
+        <div class="ic">🗄️</div>
+        <h3>Object storage</h3>
+        <span class="sub" id="storeUrl">s3://bda-lake</span>
+      </div>
+      <div class="card-body" id="storeBody"></div>
+      <div class="store-foot"><span id="storeCount">0 objects</span><span id="storeSize">0 B</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head comp"><div class="ic">⚙️</div><h3>Cluster lifecycle</h3><span class="sub">transient</span></div>
+      <div class="card-body" id="clusterBody"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head cost"><div class="ic">💲</div><h3>Cost model</h3><span class="sub">eu-west-1</span></div>
+      <div class="card-body" id="costBody"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- simulated AWS sign-up wizard -->
+<div class="overlay" id="awsOverlay">
+  <div class="modal aws">
+    <div class="m-head"><h3 id="awsTitle">Create an AWS account</h3><button class="x" data-close="awsOverlay">×</button></div>
+    <div class="m-body" id="awsBody"></div>
+    <div class="m-foot" id="awsFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Plain scripts in dependency order, so the lab also runs from
+     file:// with no build step and no server. -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/bridge.js"></script>
+
+<script src="js/data/setup.js"></script>
+<script src="js/data/steps.js"></script>
+
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/nav.js"></script>
+<script src="js/ui/step-panel.js"></script>
+<script src="js/ui/terminal.js"></script>
+
+<script src="js/engine/effects.js"></script>
+<script src="js/engine/runner.js"></script>
+
+<!-- the simulated browser, its two console apps, and the window manager -->
+<script src="console/js/chrome.js"></script>
+<script src="console/js/minio.js"></script>
+<script src="console/js/aws.js"></script>
+<script src="js/consoles/sim-window.js"></script>
+<script src="js/consoles/launcher.js"></script>
+<script src="js/consoles/aws-signup.js"></script>
+
+<script src="js/app.js"></script>
+</body>
+</html>

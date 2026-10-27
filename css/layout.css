@@ -1,0 +1,79 @@
+/* ============================================================
+   layout.css — the page frame: header, three-column grid,
+   left nav rail, and every responsive breakpoint.
+   ============================================================ */
+
+/* ---------- header ---------- */
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:50;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:16px; padding:10px 18px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:11px; min-width:0}
+.logo{width:34px;height:34px;flex:0 0 auto}
+.brand-txt{min-width:0}
+.brand-txt h1{font-size:15px; line-height:1.15}
+.brand-txt p{margin:1px 0 0; font-size:11.5px; color:var(--ink-3)}
+.env-strip{display:flex; align-items:center; gap:7px; margin-left:auto; flex-wrap:wrap}
+
+/* ---------- three column grid ---------- */
+.app{
+  display:grid; grid-template-columns:232px minmax(0,1fr) 372px;
+  gap:14px; padding:14px 18px 28px; align-items:start;
+}
+.center{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rail{
+  display:flex;flex-direction:column;gap:14px;
+  position:sticky;top:calc(64px + env(safe-area-inset-top,0px));
+}
+
+/* ---------- left nav rail ---------- */
+.nav{
+  position:sticky; top:calc(64px + env(safe-area-inset-top,0px));
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);
+}
+.nav-prog{padding:13px 14px 11px; border-bottom:1px solid var(--border)}
+.nav-prog .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-bottom:7px}
+.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden}
+.bar>i{
+  display:block;height:100%;width:0;
+  background:linear-gradient(90deg,var(--storage),var(--compute));
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+}
+.nav-group{padding:9px 10px 4px}
+.nav-group>span{
+  font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);padding:0 4px;
+}
+.nav-list{list-style:none;margin:5px 0 0;padding:0}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:12.5px;color:var(--ink-2);margin-bottom:1px;
+}
+.nav-item:hover{background:var(--surface-2)}
+.nav-item.active{background:var(--surface-3);color:var(--ink);font-weight:600;box-shadow:inset 2px 0 0 var(--storage)}
+.nav-num{
+  width:21px;height:21px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;
+  font-size:11px;font-weight:600;background:var(--surface-3);color:var(--ink-3);
+  border:1px solid var(--border);font-family:var(--font-mono);
+}
+.nav-item.active .nav-num{background:var(--storage);color:#fff;border-color:var(--storage)}
+.nav-item.done .nav-num{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.nav-item.done .nav-num::after{content:"✓"}
+.nav-item.done .nav-num span{display:none}
+.nav-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .app{grid-template-columns:200px minmax(0,1fr)}
+  .rail{grid-column:1 / -1;position:static;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .rail .card:first-child{grid-column:1 / -1}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;padding:12px 12px 24px}
+  .nav{position:static}
+  .rail{grid-template-columns:1fr}
+  .env-strip{width:100%;margin-left:0}
+  .term{height:300px}
+}

@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Big Data Lab Simulator — EMR / HDInsight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eaeff4; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef3f8;
+  --border:#d7e0ea; --border-strong:#bfccda;
+  --ink:#152233; --ink-2:#44566b; --ink-3:#6c7e92; --muted:#90a0b2;
+  --storage:#0e7c86; --storage-soft:#d4eef0; --storage-line:#9ad7db;
+  --compute:#4f46e5; --compute-soft:#e5e3fb; --compute-line:#c4bffb;
+  --warn:#b45309; --warn-soft:#fbe8d0; --warn-line:#efc488;
+  --ok:#157a3c; --ok-soft:#d6efdf; --ok-line:#9fd6b2;
+  --danger:#be123c; --danger-soft:#fbdbe3;
+  --term-bg:#eff4f9; --term-ink:#243244; --term-dim:#7488a0;
+  --term-green:#0f7a3d; --term-red:#c01f45; --term-blue:#2b4acb; --term-teal:#0b7680; --term-amber:#9a5a05; --term-violet:#5b3fd6;
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 1px 2px rgba(21,34,51,.05), 0 8px 24px -16px rgba(21,34,51,.22);
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:14px; line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.01em}
+a{color:var(--storage)}
+::selection{background:#bfe6e9}
+
+/* fixed top bar fill for safe area */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:60}
+
+/* ---------- Header ---------- */
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:50;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:16px; padding:10px 18px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:11px; min-width:0}
+.logo{width:34px;height:34px;flex:0 0 auto}
+.brand-txt{min-width:0}
+.brand-txt h1{font-size:15px; line-height:1.15}
+.brand-txt p{margin:1px 0 0; font-size:11.5px; color:var(--ink-3)}
+.env-strip{display:flex; align-items:center; gap:7px; margin-left:auto; flex-wrap:wrap}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:500;
+  padding:5px 9px; border-radius:100px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--ink-2); white-space:nowrap;
+}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.chip.on{background:var(--ok-soft); border-color:var(--ok-line); color:#0e5a2c}
+.chip.on .dot{background:var(--ok)}
+.chip.run{background:var(--compute-soft); border-color:var(--compute-line); color:#3b32b8}
+.chip.run .dot{background:var(--compute); animation:pulse 1.1s infinite}
+.chip.cost{background:var(--warn-soft);border-color:var(--warn-line);color:#8a4208}
+.chip.cost .dot{background:var(--warn)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.btn-reset{
+  font:inherit;font-size:12px;font-weight:500;cursor:pointer;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:6px 11px;
+}
+.btn-reset:hover{border-color:var(--border-strong);background:var(--surface-3)}
+
+/* ---------- Layout ---------- */
+.app{display:grid; grid-template-columns:232px minmax(0,1fr) 372px; gap:14px; padding:14px 18px 28px; align-items:start}
+
+/* ---------- Nav rail ---------- */
+.nav{position:sticky; top:calc(64px + env(safe-area-inset-top,0px)); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow)}
+.nav-prog{padding:13px 14px 11px; border-bottom:1px solid var(--border)}
+.nav-prog .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-bottom:7px}
+.bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--storage),var(--compute));transition:width .5s cubic-bezier(.4,0,.2,1)}
+.nav-group{padding:9px 10px 4px}
+.nav-group>span{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.nav-list{list-style:none;margin:5px 0 0;padding:0}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:12.5px;color:var(--ink-2);margin-bottom:1px;
+}
+.nav-item:hover{background:var(--surface-2)}
+.nav-item.active{background:var(--surface-3);color:var(--ink);font-weight:600;box-shadow:inset 2px 0 0 var(--storage)}
+.nav-num{
+  width:21px;height:21px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;
+  font-size:11px;font-weight:600;background:var(--surface-3);color:var(--ink-3);border:1px solid var(--border);
+  font-family:"IBM Plex Mono",monospace;
+}
+.nav-item.active .nav-num{background:var(--storage);color:#fff;border-color:var(--storage)}
+.nav-item.done .nav-num{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.nav-item.done .nav-num::after{content:"✓"}
+.nav-item.done .nav-num span{display:none}
+.nav-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Center column ---------- */
+.center{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.step-head{padding:16px 18px 14px;border-bottom:1px solid var(--border)}
+.step-eyebrow{font-size:11px;font-weight:600;color:var(--storage);font-family:"IBM Plex Mono",monospace;margin-bottom:5px}
+.step-eyebrow.setup{color:var(--compute)}
+.step-head h2{font-size:18px}
+.step-head .lede{margin:8px 0 0;color:var(--ink-2);font-size:13.5px;max-width:62ch}
+.step-body{padding:16px 18px}
+.teach{
+  display:flex;gap:11px;background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--storage);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:13px;
+}
+.teach.setup{border-left-color:var(--compute)}
+.teach.warn{border-left-color:var(--warn);background:var(--warn-soft);border-color:var(--warn-line)}
+.teach .ic{flex:0 0 auto;font-size:15px;line-height:1.3}
+.teach p{margin:0;font-size:12.8px;color:var(--ink-2)}
+.teach strong{color:var(--ink)}
+
+.cmd{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:12px;background:var(--surface-3)}
+.cmd-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.cmd-bar .lbl{font-size:11.5px;font-weight:600;color:var(--ink-2);margin-right:auto;display:flex;align-items:center;gap:7px}
+.tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;font-family:"IBM Plex Mono",monospace}
+.tag.added{background:var(--compute-soft);color:#3b32b8}
+.tag.review{background:var(--warn-soft);color:#8a4208}
+.cmd pre{margin:0;padding:11px 13px;overflow-x:auto;font-size:12.3px;line-height:1.55;color:var(--term-ink);white-space:pre}
+.cmd pre .cm{color:var(--term-dim)}
+.cmd pre .kw{color:var(--term-violet);font-weight:500}
+.cmd pre .st{color:var(--term-teal)}
+.cmd pre .fl{color:var(--term-amber)}
+.btn{font:inherit;font-weight:600;font-size:12px;cursor:pointer;border-radius:7px;padding:6px 13px;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:.12s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-run{background:var(--storage);color:#fff}
+.btn-run:hover:not(:disabled){background:#0a6b74}
+.btn-copy{background:var(--surface);color:var(--ink-2);border-color:var(--border-strong)}
+.btn-copy:hover:not(:disabled){background:var(--surface-3)}
+.btn-ghost{background:var(--surface);color:var(--compute);border-color:var(--compute-line)}
+.btn-ghost:hover:not(:disabled){background:var(--compute-soft)}
+.step-nav-btns{display:flex;justify-content:space-between;gap:10px;margin-top:4px}
+.btn-step{background:var(--surface-2);color:var(--ink-2);border-color:var(--border);font-weight:500}
+.btn-step:hover:not(:disabled){border-color:var(--border-strong);background:var(--surface-3)}
+.btn-run-all{background:var(--compute);color:#fff;margin-left:auto}
+.btn-run-all:hover:not(:disabled){background:#413ad0}
+
+/* ---------- Terminal ---------- */
+.term-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.term-head{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.tl{display:flex;gap:6px}
+.tl i{width:11px;height:11px;border-radius:50%;display:block}
+.tl i:nth-child(1){background:#e06c75}.tl i:nth-child(2){background:#e5c07b}.tl i:nth-child(3){background:#56b16b}
+.term-head .ttl{font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;margin-right:auto}
+.term-clear{font:inherit;font-size:11px;color:var(--ink-3);background:none;border:none;cursor:pointer}
+.term-clear:hover{color:var(--ink)}
+.term{background:var(--term-bg);padding:13px 15px;height:360px;overflow-y:auto;font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.6;color:var(--term-ink)}
+.term .ln{white-space:pre-wrap;word-break:break-word}
+.term .prompt .u{color:var(--term-teal);font-weight:600}
+.term .prompt .p{color:var(--term-blue)}
+.term .prompt .cmd{color:var(--term-ink)}
+.g{color:var(--term-green)} .r{color:var(--term-red)} .b{color:var(--term-blue)}
+.t{color:var(--term-teal)} .a{color:var(--term-amber)} .v{color:var(--term-violet)}
+.d{color:var(--term-dim)} .bold{font-weight:600}
+.term-input{display:flex;align-items:center;gap:8px;padding:8px 15px;border-top:1px solid var(--border);background:var(--surface-2)}
+.term-input .u{color:var(--term-teal);font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;flex:0 0 auto}
+.term-input input{flex:1;border:none;background:none;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink);outline:none}
+.term-input input::placeholder{color:var(--muted)}
+
+/* ---------- Right rail ---------- */
+.rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:calc(64px + env(safe-area-inset-top,0px))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--border)}
+.card-head .ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:0 0 auto;font-size:13px}
+.card-head.store .ic{background:var(--storage-soft);color:var(--storage)}
+.card-head.comp .ic{background:var(--compute-soft);color:var(--compute)}
+.card-head.cost .ic{background:var(--warn-soft);color:var(--warn)}
+.card-head h3{font-size:13px;margin-right:auto}
+.card-head .sub{font-size:10.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.card-body{padding:12px 14px}
+.flash{animation:flash 1.1s ease}
+@keyframes flash{0%{background:var(--warn-soft)}100%{background:var(--surface)}}
+.flash-store{animation:flashS 1.1s ease}
+@keyframes flashS{0%{background:var(--storage-soft)}100%{background:var(--surface)}}
+
+/* bucket tree */
+.empty-note{font-size:12px;color:var(--muted);text-align:center;padding:14px 6px;font-style:italic}
+.tree{font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.75}
+.node{display:flex;align-items:center;gap:7px;padding:1px 0;color:var(--ink-2)}
+.node .nm{color:var(--ink)}
+.node.zone .nm{color:var(--storage);font-weight:600}
+.node .sz{margin-left:auto;color:var(--ink-3);font-size:11px}
+.node .badge{margin-left:auto;font-size:10px;background:var(--storage-soft);color:var(--storage);padding:1px 7px;border-radius:100px;font-weight:600}
+.node.isnew{animation:newrow 1.6s ease}
+@keyframes newrow{0%{background:#cdeef0;border-radius:5px}100%{background:transparent}}
+.ind1{padding-left:15px}.ind2{padding-left:30px}.ind3{padding-left:45px}
+.store-foot{border-top:1px solid var(--border);padding:9px 14px;display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.local-head{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:13px 0 6px}
+.local-list{list-style:none;margin:0;padding:0;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+.local-list li{display:flex;gap:7px;align-items:center;padding:2px 0;color:var(--ink-2)}
+.local-list li .f{color:var(--ink)}
+.local-list li .n{margin-left:auto;font-size:10px;color:var(--compute);background:var(--compute-soft);padding:1px 6px;border-radius:100px}
+.local-empty{font-size:11.5px;color:var(--muted);font-style:italic}
+
+/* cluster */
+.pipe{display:flex;flex-direction:column;gap:0}
+.stage{display:flex;align-items:center;gap:11px;padding:7px 0;position:relative}
+.stage .dot{width:15px;height:15px;border-radius:50%;flex:0 0 auto;border:2px solid var(--border-strong);background:var(--surface);z-index:2;transition:.25s}
+.stage::before{content:"";position:absolute;left:7px;top:17px;bottom:-4px;width:2px;background:var(--border);z-index:1}
+.stage:last-child::before{display:none}
+.stage .txt{font-size:12px;color:var(--ink-3)}
+.stage .txt b{display:block;color:var(--ink-2);font-size:12.5px;font-weight:500}
+.stage .txt small{font-size:10.5px}
+.stage.active .dot{border-color:var(--compute);background:var(--compute);box-shadow:0 0 0 4px var(--compute-soft);animation:pulse 1s infinite}
+.stage.active .txt b{color:var(--compute)}
+.stage.done .dot{border-color:var(--ok);background:var(--ok)}
+.stage.done .txt b{color:var(--ink)}
+.stage.term .dot{border-color:var(--ink-3);background:var(--ink-3)}
+.cluster-state{font-size:11.5px;font-family:"IBM Plex Mono",monospace;padding:7px 10px;border-radius:7px;background:var(--surface-3);color:var(--ink-3);margin-bottom:12px;text-align:center}
+.cluster-state.live{background:var(--compute-soft);color:#3b32b8;font-weight:600}
+.cluster-state.gone{background:var(--ok-soft);color:#0e5a2c;font-weight:600}
+
+/* cost */
+.cost-empty{font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:10px 4px}
+.cost-rows{list-style:none;margin:0;padding:0}
+.cost-rows li{margin-bottom:11px}
+.cost-rows .cl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.cost-rows .cl .v{font-family:"IBM Plex Mono",monospace;font-weight:600}
+.meter{height:9px;border-radius:100px;background:var(--surface-3);overflow:hidden}
+.meter>i{display:block;height:100%;width:0;border-radius:100px;transition:width .9s cubic-bezier(.4,0,.2,1)}
+.m-od>i{background:var(--storage)} .m-spot>i{background:var(--ok)} .m-srv>i{background:var(--compute)}
+.cost-rows .pct{color:var(--ok);font-weight:600}
+.forgot{margin-top:4px;background:var(--danger-soft);border:1px solid #f4b9c6;border-radius:var(--radius-sm);padding:10px 12px}
+.forgot .cl{display:flex;justify-content:space-between;font-size:12px;color:#8e0f30;font-weight:600;margin-bottom:5px}
+.forgot .cl .v{font-family:"IBM Plex Mono",monospace}
+.forgot .meter{background:#f6ccd6}.forgot .meter>i{background:var(--danger);width:100%}
+.forgot small{display:block;margin-top:6px;font-size:11px;color:#a33;font-weight:400}
+
+/* deliverable */
+.deliv .pt{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);margin-bottom:7px}
+.deliv .pt input{margin-top:3px;accent-color:var(--storage)}
+.deliv textarea{width:100%;margin-top:11px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px;font:inherit;font-size:13px;resize:vertical;min-height:120px;color:var(--ink);background:var(--surface-2)}
+.deliv textarea:focus{outline:none;border-color:var(--storage);background:#fff}
+.deliv .wc{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+.deliv .wc span{font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.wc-ok{color:var(--ok)!important}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(21,34,51,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:18px}
+.overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:14px;max-width:440px;width:100%;overflow:hidden;box-shadow:0 24px 64px -20px rgba(0,0,0,.5);max-height:90vh;display:flex;flex-direction:column}
+.modal.aws{max-width:400px}
+.m-head{padding:16px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border)}
+.m-head h3{font-size:15px;margin-right:auto}
+.m-head .x{font:inherit;font-size:19px;color:var(--ink-3);background:none;border:none;cursor:pointer;line-height:1}
+.m-body{padding:20px;overflow-y:auto}
+.sim-banner{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:8px;padding:9px 12px;font-size:11.5px;color:#8a4208;margin-bottom:17px;display:flex;gap:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--ink-2);margin-bottom:5px}
+.field input{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;font:inherit;font-size:13.5px;color:var(--ink)}
+.field input:focus{outline:none;border-color:var(--storage)}
+.field .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.m-dots{display:flex;gap:6px}.m-dots i{width:7px;height:7px;border-radius:50%;background:var(--border-strong)}.m-dots i.on{background:var(--storage)}
+.btn-primary{background:var(--storage);color:#fff;font:inherit;font-weight:600;font-size:13px;border:none;border-radius:8px;padding:9px 18px;cursor:pointer}
+.btn-primary:hover{background:#0a6b74}
+.aws-done{text-align:center;padding:12px 4px}
+.aws-done .big{font-size:40px;margin-bottom:8px}
+.aws-done h4{font-size:16px;margin-bottom:7px}
+.aws-done p{color:var(--ink-2);font-size:13px;margin:0 0 4px}
+.aws-done .acct{font-family:"IBM Plex Mono",monospace;background:var(--surface-3);padding:4px 10px;border-radius:7px;display:inline-block;margin-top:8px;font-size:12px}
+
+/* MinIO console modal */
+.modal.minio{max-width:560px}
+.minio-login{text-align:center;padding:8px 10px}
+.minio-brand{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;color:var(--storage);margin-bottom:3px}
+.minio-brand small{display:block;font-family:"IBM Plex Sans";font-size:11px;color:var(--ink-3);font-weight:400;letter-spacing:.03em}
+.minio-login .field{text-align:left;margin-top:16px}
+.minio-err{display:none;background:var(--danger-soft);color:#8e0f30;font-size:12px;padding:9px 12px;border-radius:8px;margin-bottom:14px}
+.minio-err.show{display:block}
+.minio-console .mc-top{display:flex;align-items:center;gap:10px;background:var(--surface-3);padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:12px}
+.minio-console .mc-top .url{font-family:"IBM Plex Mono",monospace;color:var(--ink-2)}
+.minio-console .mc-top .live{margin-left:auto;font-size:11px;color:var(--ok);font-weight:600;display:flex;align-items:center;gap:6px}
+.minio-console .mc-top .live .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.mc-bucket{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mc-bucket .bh{display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--surface-2);font-weight:600;font-size:13px}
+.mc-bucket .bh .usage{margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:400;font-family:"IBM Plex Mono",monospace}
+
+/* toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:200}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* responsive */
+@media (max-width:1180px){
+  .app{grid-template-columns:200px minmax(0,1fr)}
+  .rail{grid-column:1 / -1;position:static;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .rail .card:first-child{grid-column:1 / -1}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;padding:12px 12px 24px}
+  .nav{position:static}
+  .rail{grid-template-columns:1fr}
+  .env-strip{width:100%;margin-left:0}
+  .term{height:300px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="9" fill="#0e7c86"/>
+      <ellipse cx="20" cy="12" rx="11" ry="4" fill="#fff" opacity=".92"/>
+      <path d="M9 12v6c0 2.2 4.9 4 11 4s11-1.8 11-4v-6" stroke="#fff" stroke-width="2.1" opacity=".72" fill="none"/>
+      <path d="M9 18v6c0 2.2 4.9 4 11 4s11-1.8 11-4v-6" stroke="#fff" stroke-width="2.1" opacity=".5" fill="none"/>
+      <path d="M9 24v4c0 2.2 4.9 4 11 4s11-1.8 11-4v-4" stroke="#fff" stroke-width="2.1" opacity=".3" fill="none"/>
+    </svg>
+    <div class="brand-txt">
+      <h1>Big Data Lab Simulator</h1>
+      <p>Deploying managed Spark on object storage · EMR / HDInsight</p>
+    </div>
+  </div>
+  <div class="env-strip" id="envStrip">
+    <span class="chip" id="chDocker"><i class="dot"></i>Docker</span>
+    <span class="chip" id="chMinio"><i class="dot"></i>MinIO</span>
+    <span class="chip" id="chCli"><i class="dot"></i>AWS&nbsp;CLI</span>
+    <span class="chip" id="chRegion"><i class="dot"></i>no&nbsp;region</span>
+    <span class="chip cost" id="chCost"><i class="dot"></i>Session&nbsp;$0.00</span>
+    <button class="btn-reset" id="btnReset">↺ Reset</button>
+  </div>
+</header>
+
+<main class="app">
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-prog">
+      <div class="lab"><span>Progress</span><span id="progTxt">0 / 17</span></div>
+      <div class="bar"><i id="progBar"></i></div>
+    </div>
+    <div class="nav-group"><span>Setup</span><ul class="nav-list" id="navSetup"></ul></div>
+    <div class="nav-group"><span>Lab steps</span><ul class="nav-list" id="navSteps"></ul></div>
+  </nav>
+
+  <!-- CENTER -->
+  <section class="center">
+    <div class="panel" id="stepPanel"></div>
+
+    <div class="term-wrap">
+      <div class="term-head">
+        <div class="tl"><i></i><i></i><i></i></div>
+        <span class="ttl">student@bda-lab — bash</span>
+        <button class="term-clear" id="termClear">clear</button>
+      </div>
+      <div class="term" id="term"></div>
+      <div class="term-input">
+        <span class="u" id="cwdLabel">student@bda-lab:~$</span>
+        <input id="termInput" placeholder="type a command, or use the Run buttons above…" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT RAIL -->
+  <aside class="rail">
+    <div class="card">
+      <div class="card-head store">
+        <div class="ic">🗄️</div>
+        <h3>Object storage</h3>
+        <span class="sub" id="storeUrl">s3://bda-lake</span>
+      </div>
+      <div class="card-body" id="storeBody"></div>
+      <div class="store-foot"><span id="storeCount">0 objects</span><span id="storeSize">0 B</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head comp"><div class="ic">⚙️</div><h3>Cluster lifecycle</h3><span class="sub">transient</span></div>
+      <div class="card-body" id="clusterBody"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head cost"><div class="ic">💲</div><h3>Cost model</h3><span class="sub">eu-west-1</span></div>
+      <div class="card-body" id="costBody"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- AWS signup modal -->
+<div class="overlay" id="awsOverlay">
+  <div class="modal aws">
+    <div class="m-head"><h3 id="awsTitle">Create an AWS account</h3><button class="x" data-close="awsOverlay">×</button></div>
+    <div class="m-body" id="awsBody"></div>
+    <div class="m-foot" id="awsFoot"></div>
+  </div>
+</div>
+
+<!-- MinIO console modal -->
+<div class="overlay" id="minioOverlay">
+  <div class="modal minio">
+    <div class="m-head"><h3>MinIO Console</h3><button class="x" data-close="minioOverlay">×</button></div>
+    <div class="m-body" id="minioBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const PROMPT = { user:'student', host:'bda-lab' };
+let state, S;
+
+function freshState(){
+  return {
+    done:{},                 // id -> true
+    cwd:'~',
+    env:{ docker:false, minio:false, cli:false, region:null, awsAcct:null, minioSeen:false, credsRemoved:false },
+    files:[],                // {path, size} relative to bucket (no "bda-lake/" prefix)
+    local:[],                // {name, note}  in ~/lab8 (or ~/lab3)
+    bucketCreated:false,
+    runtime:null,            // measured spark-submit wall time (h)
+    cost:null,               // computed cost object
+    cluster:{ active:false, stageIndex:-1, terminated:false },
+    sessionCost:0,
+  };
+}
+
+/* ============================================================
+   LAB CONTENT
+   ============================================================ */
+const SETUP = [
+  {
+    id:'aws', num:'A', title:'Create AWS account', eyebrow:'SETUP · OPTIONAL',
+    lede:'A guided (simulated) AWS sign-up, so the console feels familiar. This lab needs no real account and spends no money — everything else runs locally against MinIO.',
+    teach:[{cls:'setup',ic:'ℹ️',html:'On a real job you\u2019d do this once. We include it only so the flow looks like the real thing. <strong>Skip it and the lab still works.</strong>'}],
+    special:'aws'
+  },
+  {
+    id:'docker', num:'B', title:'Install & check Docker', eyebrow:'SETUP',
+    lede:'Docker runs MinIO (our stand-in for S3) as a container. Confirm it\u2019s installed before anything else.',
+    teach:[{cls:'setup',ic:'🐳',html:'A <strong>container</strong> is a sealed, disposable box that holds an app and everything it needs. MinIO ships as one, so you don\u2019t install it by hand.'}],
+    cmds:[{ id:'docker-v', lbl:'Verify Docker', code:'docker --version && docker info --format "{{.ServerVersion}}" >/dev/null 2>&1 && echo "docker daemon: reachable"',
+      out:[['g','Docker version 27.1.1, build 6312585'],['','docker daemon: reachable']], fx:'docker' }]
+  },
+  {
+    id:'awscli', num:'C', title:'Configure the AWS CLI', eyebrow:'SETUP',
+    lede:'The same aws command talks to both real S3 and MinIO. Point it at a region and give it keys. For MinIO we\u2019ll use minioadmin / minioadmin.',
+    teach:[{cls:'setup',ic:'🔑',html:'<code>aws configure</code> saves credentials to <code>~/.aws/credentials</code>. In this lab the keys are local-only; in Step 11 you\u2019ll remove keys entirely and let the cluster\u2019s IAM role supply them.'}],
+    cmds:[{ id:'aws-config', lbl:'Run aws configure', code:'aws configure',
+      out:[['d','AWS Access Key ID [None]: ',true,'minioadmin'],
+           ['d','AWS Secret Access Key [None]: ',true,'minioadmin'],
+           ['d','Default region name [None]: ',true,'us-east-1'],
+           ['d','Default output format [None]: ',true,'json'],
+           ['g','credentials saved to ~/.aws/credentials']], fx:'cli' }]
+  },
+  {
+    id:'minio', num:'D', title:'Open the MinIO console', eyebrow:'SETUP',
+    lede:'MinIO has a web dashboard at http://localhost:9001 — the visual twin of the AWS S3 console. You can only reach it once MinIO is running (Step 1 starts it).',
+    teach:[{cls:'setup',ic:'🖥️',html:'Having a browser view of your buckets next to the terminal is the fastest way to <strong>see</strong> what each command did. Keep it open as you work.'}],
+    special:'minio'
+  },
+];
+
+const STEPS = [
+  {
+    id:'s1', num:1, title:'Start storage & load the raw zone', eyebrow:'STEP 01',
+    lede:'MinIO stands in for S3 with an identical API. Create the three-zone layout almost every data lake uses — raw, curated, results — and drop in the source data.',
+    teach:[
+      {ic:'🪣',html:'<strong>Zones are a convention, not a feature.</strong> Their value: permissions and retention can differ per zone, and everyone knows what a path means.'},
+    ],
+    cmds:[
+      { id:'s1-start', lbl:'Start MinIO (S3-compatible)', code:
+`docker start bda-minio 2>/dev/null || docker run -d --name bda-minio \\
+  -p 9000:9000 -p 9001:9001 \\
+  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \\
+  minio/minio server /data --console-address ':9001'
+sleep 5
+export AWS_ACCESS_KEY_ID=minioadmin
+export AWS_SECRET_ACCESS_KEY=minioadmin
+export AWS_DEFAULT_REGION=us-east-1
+alias s3='aws --endpoint-url http://localhost:9000 s3'`,
+        out:[['d','Unable to find image \u2018minio/minio:latest\u2019 locally'],
+             ['d','latest: Pulling from minio/minio'],
+             ['d','a1f1879bb7de: Pull complete'],
+             ['','Status: Downloaded newer image for minio/minio:latest'],
+             ['t','e3c91a7f0b2d44a9c81e5f6a2b7d0c19ab3e4f5061728394a5b6c7d8e9f00112'],
+             ['d','[+] API:  http://localhost:9000   Console: http://localhost:9001'],
+             ['g','MinIO is up \u2014 console at http://localhost:9001 (minioadmin / minioadmin)']],
+        fx:'minio-up' },
+      { id:'s1-gen', lbl:'Generate the sample events (Lab 3.1 data)', tag:'added', code:
+`# added for this simulator: recreates the Lab 3.1 sample if you don't have it
+mkdir -p ~/lab3
+python3 ~/lab3/gen_events.py --rows 4000000 > ~/lab3/events.json`,
+        out:[['d','generating synthetic web events...'],
+             ['','wrote 4,000,000 rows \u2192 ~/lab3/events.json'],
+             ['t','size on disk: 1.1 GiB']],
+        fx:'gen-events' },
+      { id:'s1-load', lbl:'Create the bucket & load raw/', code:
+`s3 mb s3://bda-lake
+s3 cp ~/lab3/events.json s3://bda-lake/raw/events/events.json
+s3 ls --recursive s3://bda-lake/ --human-readable`,
+        out:[['t','make_bucket: bda-lake'],
+             ['','upload: ~/lab3/events.json to s3://bda-lake/raw/events/events.json'],
+             ['d','2026-10-26 09:14:02  1.1 GiB raw/events/events.json']],
+        fx:'load-raw', need:'minio' },
+    ]
+  },
+  {
+    id:'s2', num:2, title:'Write the bootstrap action', eyebrow:'STEP 02',
+    lede:'A bootstrap action runs on every node before the cluster is marked ready. It is where dependencies go — and the most common cause of a cluster that starts then instantly fails.',
+    teach:[
+      {ic:'⚡',html:'Two rules: <strong>fail fast</strong> with <code>set -e</code> so a broken node can\u2019t join silently, and <strong>keep it short</strong> — every second here is billed on every node.'},
+    ],
+    cmds:[
+      { id:'s2-write', lbl:'Create & run bootstrap.sh', code:
+`mkdir -p ~/lab8 && cd ~/lab8
+cat > bootstrap.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+sudo python3 -m pip install --quiet pandas==2.2.2 boto3==1.34.100
+python3 -c 'import pandas, boto3; print("deps ok", pandas.__version__)'
+sudo mkdir -p /mnt/scratch && sudo chmod 1777 /mnt/scratch
+echo "bootstrap complete on $(hostname)"
+EOF
+chmod +x bootstrap.sh
+./bootstrap.sh`,
+        out:[['d','installing pandas==2.2.2 boto3==1.34.100 ...'],
+             ['g','deps ok 2.2.2'],
+             ['','bootstrap complete on ip-10-0-1-42']],
+        fx:'mk-bootstrap' },
+      { id:'s2-up', lbl:'Upload to the scripts zone', code:`s3 cp bootstrap.sh s3://bda-lake/scripts/bootstrap.sh`,
+        out:[['','upload: ./bootstrap.sh to s3://bda-lake/scripts/bootstrap.sh']], fx:'up-bootstrap', need:'minio' },
+    ]
+  },
+  {
+    id:'s3', num:3, title:'Write the job as a submittable step', eyebrow:'STEP 03',
+    lede:'An EMR step is just a spark-submit with arguments. Make every path a parameter — a job with a hard-coded bucket can\u2019t be promoted from dev to prod without editing code.',
+    teach:[
+      {ic:'🧩',html:'The job prints its own row counts, so the logs are self-documenting. On a finished cluster, those printed lines are often your <strong>only</strong> view into what a step did.'},
+    ],
+    cmds:[
+      { id:'s3-write', lbl:'Create daily_rollup.py', code:
+`cat > ~/lab8/daily_rollup.py <<'PYEOF'
+import sys
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import to_timestamp, to_date, hour, sum as _sum, count
+
+src, dst = sys.argv[1], sys.argv[2]
+spark = SparkSession.builder.appName("daily-rollup").getOrCreate()
+raw = spark.read.json(src)
+print(f"[job] read {raw.count()} rows from {src}")
+out = (raw
+   .withColumn("ts", to_timestamp("event_time"))
+   .withColumn("day", to_date("ts")).withColumn("hr", hour("ts"))
+   .groupBy("day","hr","host","action")
+   .agg(_sum("bytes").alias("total_bytes"), count("*").alias("event_count")))
+n = out.count()
+print(f"[job] writing {n} aggregated rows to {dst}")
+out.repartition("day").write.mode("overwrite").partitionBy("day").parquet(dst)
+print("[job] done")
+spark.stop()
+PYEOF`,
+        out:[['t','written ~/lab8/daily_rollup.py (23 lines)']], fx:'mk-job' },
+      { id:'s3-up', lbl:'Upload the job to scripts/', code:`s3 cp ~/lab8/daily_rollup.py s3://bda-lake/scripts/daily_rollup.py`,
+        out:[['','upload: ~/lab8/daily_rollup.py to s3://bda-lake/scripts/daily_rollup.py']], fx:'up-job', need:'minio' },
+    ]
+  },
+  {
+    id:'s4', num:4, title:'Configure Spark for object storage', eyebrow:'STEP 04',
+    lede:'These are the settings that make Spark talk S3. On real EMR most are set for you — writing them once means you understand what the managed service configured on your behalf.',
+    teach:[
+      {ic:'🔧',html:'<code>path.style.access</code> is required for MinIO and harmless elsewhere. On AWS you\u2019d drop the endpoint and the keys and rely on the instance role instead (Step 11).'},
+    ],
+    cmds:[
+      { id:'s4-conf', lbl:'Create s3.conf', code:
+`cat > ~/lab8/s3.conf <<'EOF'
+spark.hadoop.fs.s3a.endpoint                 http://localhost:9000
+spark.hadoop.fs.s3a.access.key               minioadmin
+spark.hadoop.fs.s3a.secret.key               minioadmin
+spark.hadoop.fs.s3a.path.style.access        true
+spark.hadoop.fs.s3a.connection.ssl.enabled   false
+spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+spark.hadoop.fs.s3a.fast.upload              true
+spark.hadoop.fs.s3a.connection.maximum       64
+EOF`,
+        out:[['t','written ~/lab8/s3.conf (8 properties)'],
+             ['a','keep this out of version control \u2014 it contains keys']], fx:'mk-conf' },
+    ]
+  },
+  {
+    id:'s5', num:5, title:'Run the step locally, end to end', eyebrow:'STEP 05',
+    lede:'This is the equivalent of a cluster step running. Watch the row counts the job prints, and note the wall time — it feeds the cost model in Step 7.',
+    teach:[
+      {ic:'▶️',html:'The output is written <strong>partitioned by day</strong>. Partitioning is how later queries skip data they don\u2019t need — the single most effective big-data speed-up.'},
+    ],
+    cmds:[
+      { id:'s5-run', lbl:'spark-submit the rollup', code:
+`cd ~/lab8
+time spark-submit \\
+  --properties-file s3.conf \\
+  --packages org.apache.hadoop:hadoop-aws:3.3.4 \\
+  daily_rollup.py \\
+  s3a://bda-lake/raw/events/events.json \\
+  s3a://bda-lake/curated/daily_rollup`,
+        out:[['d','Ivy: resolving org.apache.hadoop:hadoop-aws:3.3.4 ...'],
+             ['d','24/10/26 09:21:10 INFO SparkContext: Running Spark 3.5.1'],
+             ['b','[job] read 4000000 rows from s3a://bda-lake/raw/events/events.json'],
+             ['b','[job] writing 2184 aggregated rows to s3a://bda-lake/curated/daily_rollup'],
+             ['g','[job] done'],
+             ['','real    0m48.213s'],
+             ['d','user    1m22.004s'],
+             ['d','sys     0m06.511s']],
+        fx:'run-job', need:'minio' },
+    ]
+  },
+  {
+    id:'s6', num:6, title:'Prove the cluster is disposable', eyebrow:'STEP 06',
+    lede:'The whole transient-cluster argument rests on one claim: terminating the compute loses nothing. Test it — kill Spark completely, start fresh with no shared state, and read the results back.',
+    teach:[
+      {ic:'♻️',html:'This is what storage/compute separation buys you. On a classic HDFS cluster the data lives <em>on</em> the nodes, so killing them destroys it. Here the data never left S3.'},
+    ],
+    cmds:[
+      { id:'s6-kill', lbl:'Kill all compute, then re-read', code:
+`pkill -f SparkSubmit 2>/dev/null; sleep 2
+echo '--- all compute gone, data untouched ---'
+pyspark --properties-file ~/lab8/s3.conf \\
+  --packages org.apache.hadoop:hadoop-aws:3.3.4
+# inside the fresh shell:
+df = spark.read.parquet("s3a://bda-lake/curated/daily_rollup")
+print("rows:", df.count())
+df.groupBy("day").sum("event_count").orderBy("day").show(5)`,
+        out:[['a','--- all compute gone, data untouched ---'],
+             ['d','Welcome to a brand-new pyspark session (no shared state)'],
+             ['b','rows: 2184'],
+             ['d','+----------+-----------------+'],
+             ['d','|       day|sum(event_count)|'],
+             ['d','+----------+-----------------+'],
+             ['','|2026-10-20|           512340|'],
+             ['','|2026-10-21|           498112|'],
+             ['','|2026-10-22|           503998|'],
+             ['d','+----------+-----------------+'],
+             ['g','same data, different process \u2014 the cluster was disposable']],
+        fx:'disposable', need:'curated' },
+    ]
+  },
+  {
+    id:'s7', num:7, title:'Cost the run three ways', eyebrow:'STEP 07',
+    lede:'Do the arithmetic before you ever launch. Use your measured runtime as the per-node estimate and scale it. This takes two minutes and is the difference between a $1 job and a $400 surprise.',
+    teach:[
+      {ic:'🧮',html:'Watch the <strong>cost panel</strong> on the right fill in. The last figure — a cluster nobody terminated for a week — is why every cluster you create gets <code>--auto-terminate</code>.'},
+    ],
+    cmds:[
+      { id:'s7-cost', lbl:'Create & run cost.py', code:
+`cat > ~/lab8/cost.py <<'EOF'
+RUNTIME_H  = 0.75      # cluster lifetime incl. ~8 min startup
+CORE_NODES = 4; PRIMARY = 1
+ON_DEMAND  = 0.214     # m5.xlarge, eu-west-1
+EMR_UPLIFT = 0.054     # EMR per-instance-hour service charge
+SPOT_DISC  = 0.70; GB_SCANNED = 20
+inst_h = (CORE_NODES + PRIMARY) * RUNTIME_H
+od   = inst_h*ON_DEMAND + inst_h*EMR_UPLIFT
+spot = (PRIMARY*RUNTIME_H*ON_DEMAND
+        + CORE_NODES*RUNTIME_H*ON_DEMAND*(1-SPOT_DISC) + inst_h*EMR_UPLIFT)
+srvls = GB_SCANNED * 0.005
+print(f"instance-hours            : {inst_h:.2f}")
+print(f"EMR on-demand             : \${od:.2f}")
+print(f"EMR core-on-spot          : \${spot:.2f}   ({(1-spot/od)*100:.0f}% cheaper)")
+print(f"serverless SQL (20 GB)    : \${srvls:.2f}")
+print(f"forgotten for 7 days      : \${(CORE_NODES+PRIMARY)*24*7*(ON_DEMAND+EMR_UPLIFT):.2f}")
+print(f"egress if pulled to laptop: \${GB_SCANNED*0.09:.2f}")
+EOF
+python3 ~/lab8/cost.py`,
+        out:[['','instance-hours            : 3.75'],
+             ['t','EMR on-demand             : $1.00'],
+             ['g','EMR core-on-spot          : $0.56   (45% cheaper)'],
+             ['v','serverless SQL (20 GB)    : $0.10'],
+             ['r','forgotten for 7 days      : $225.12'],
+             ['a','egress if pulled to laptop: $1.80']],
+        fx:'cost' },
+    ]
+  },
+  {
+    id:'s8', num:8, title:'Measure the commit cost', eyebrow:'STEP 08',
+    lede:'Write the same data as many small files, then as a few large ones, and compare. The gap is the rename-and-commit problem — invisible on HDFS, expensive on object storage.',
+    teach:[
+      {ic:'🐌',html:'Object stores have no atomic rename, so committing output <strong>copies then deletes</strong>. More files = more HTTP round-trips. This is the argument for <code>coalesce</code> before writing.'},
+    ],
+    cmds:[
+      { id:'s8-commit', lbl:'Many files vs few files', code:
+`# inside pyspark
+import time
+df = spark.read.parquet("s3a://bda-lake/curated/daily_rollup")
+t = time.time()
+df.repartition(200).write.mode("overwrite").parquet("s3a://bda-lake/tmp/many")
+many = time.time() - t
+t = time.time()
+df.coalesce(4).write.mode("overwrite").parquet("s3a://bda-lake/tmp/few")
+few = time.time() - t
+print(f"200 files : {many:.1f}s")
+print(f"  4 files : {few:.1f}s")
+print(f"ratio     : {many/few:.1f}x")`,
+        out:[['','200 files : 14.2s'],
+             ['','  4 files : 3.6s'],
+             ['a','ratio     : 3.9x'],
+             ['d','on real S3 the gap is larger \u2014 every file is several requests']],
+        fx:'commit', need:'curated' },
+    ]
+  },
+  {
+    id:'s9', num:9, title:'Write the real EMR command', eyebrow:'STEP 09',
+    lede:'Write the launch command you would actually run — with the settings that matter: auto-termination, a log URI, the bootstrap action, the steps, and no public access. Reviewed, not executed.',
+    teach:[
+      {ic:'📝',html:'Annotate five lines in your report: <strong>why</strong> auto-terminate, core on-demand + task on spot, a private subnet, a log URI, and TERMINATE_CLUSTER on failure.'},
+      {cls:'setup',ic:'🎬',html:'Then hit <strong>Simulate transient cluster</strong> below to watch the whole lifecycle — and the session-cost meter tick up, then stop the instant the cluster terminates.'},
+    ],
+    cmds:[
+      { id:'s9-emr', lbl:'Create launch_emr.sh', tag:'review', code:
+`cat > ~/lab8/launch_emr.sh <<'EOF'
+#!/bin/bash   # NOT RUN HERE \u2014 reviewed, not executed
+set -euo pipefail
+BUCKET=my-real-bucket
+aws emr create-cluster \\
+  --name 'bda-daily-rollup' --release-label emr-7.1.0 \\
+  --applications Name=Spark Name=Hadoop \\
+  --instance-groups \\
+     InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5.xlarge \\
+     InstanceGroupType=CORE,InstanceCount=2,InstanceType=m5.xlarge \\
+     InstanceGroupType=TASK,InstanceCount=2,InstanceType=m5.xlarge,BidPrice=OnDemandPrice \\
+  --ec2-attributes SubnetId=subnet-private-123,KeyName=none \\
+  --service-role EMR_DefaultRole --job-flow-role EMR_EC2_DefaultRole \\
+  --log-uri s3://\$BUCKET/emr-logs/ \\
+  --bootstrap-actions Path=s3://\$BUCKET/scripts/bootstrap.sh,Name=deps \\
+  --auto-terminate \\
+  --steps Type=Spark,Name=rollup,ActionOnFailure=TERMINATE_CLUSTER,\\
+Args=[--deploy-mode,cluster,s3://\$BUCKET/scripts/daily_rollup.py,s3://\$BUCKET/raw/events/,s3://\$BUCKET/curated/daily_rollup]
+EOF
+chmod +x ~/lab8/launch_emr.sh`,
+        out:[['t','written ~/lab8/launch_emr.sh'],
+             ['a','not executed \u2014 this is the artefact you submit for review']], fx:'mk-emr' },
+    ],
+    action:{ id:'sim-cluster', label:'🎬  Simulate transient cluster', fn:'simulateCluster' }
+  },
+  {
+    id:'s10', num:10, title:'Write the HDInsight equivalent', eyebrow:'STEP 10',
+    lede:'Azure names things differently but the shape is identical: a storage account with ADLS Gen2 replaces the bucket, and a managed identity replaces the instance role. Writing both is the point.',
+    teach:[
+      {ic:'☁️',html:'HDInsight has <strong>no <code>--auto-terminate</code></strong>. You must delete the cluster yourself — forgetting is entirely your problem, and your bill.'},
+    ],
+    cmds:[
+      { id:'s10-hdi', lbl:'Create launch_hdinsight.sh', tag:'review', code:
+`cat > ~/lab8/launch_hdinsight.sh <<'EOF'
+#!/bin/bash   # NOT RUN HERE
+set -euo pipefail
+RG=bda-rg; ST=bdalakestore; CL=bda-spark
+az storage account create -n \$ST -g \$RG --sku Standard_LRS --hns true
+az storage fs create -n lake --account-name \$ST
+az hdinsight create --name \$CL --resource-group \$RG --type spark --version 5.1 \\
+  --storage-account \$ST --storage-container lake \\
+  --assign-identity bda-managed-identity \\
+  --headnode-size Standard_D4_v2 --workernode-size Standard_D4_v2 \\
+  --workernode-count 3 --vnet-name bda-vnet --subnet private-subnet
+az hdinsight application create --cluster-name \$CL --resource-group \$RG \\
+  --name rollup --script-uri abfss://lake@\$ST.dfs.core.windows.net/scripts/daily_rollup.py
+az hdinsight delete --name \$CL --resource-group \$RG --yes
+EOF`,
+        out:[['t','written ~/lab8/launch_hdinsight.sh'],
+             ['d','── mapping ──────────────────────────────'],
+             ['','S3 bucket        \u2192 ADLS Gen2 container (hns=true)'],
+             ['','s3a://           \u2192 abfss://'],
+             ['','instance profile \u2192 managed identity'],
+             ['r','--auto-terminate \u2192 no equivalent; delete it yourself']], fx:'mk-hdi' },
+    ]
+  },
+  {
+    id:'s11', num:11, title:'Remove every credential from disk', eyebrow:'STEP 11',
+    lede:'The MinIO keys in s3.conf were a lab convenience. On a real cluster there must be no keys anywhere — the instance role supplies temporary credentials automatically. This diff is the deliverable.',
+    teach:[
+      {ic:'🔒',html:'A leaked long-lived key works until someone notices and revokes it. A leaked instance-role <strong>session</strong> expires on its own in hours. That difference is the whole point.'},
+    ],
+    cmds:[
+      { id:'s11-prod', lbl:'Create s3-prod.conf & diff', code:
+`cat > ~/lab8/s3-prod.conf <<'EOF'
+spark.hadoop.fs.s3a.aws.credentials.provider \\
+  com.amazonaws.auth.InstanceProfileCredentialsProvider
+spark.hadoop.fs.s3a.connection.maximum       128
+spark.hadoop.fs.s3a.fast.upload              true
+spark.hadoop.fs.s3a.committer.name           magic
+spark.sql.parquet.output.committer.class \\
+  org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+EOF
+diff ~/lab8/s3.conf ~/lab8/s3-prod.conf`,
+        out:[['r','< spark.hadoop.fs.s3a.endpoint        http://localhost:9000'],
+             ['r','< spark.hadoop.fs.s3a.access.key      minioadmin'],
+             ['r','< spark.hadoop.fs.s3a.secret.key      minioadmin'],
+             ['g','> spark.hadoop.fs.s3a.committer.name  magic'],
+             ['g','> spark.sql.parquet.output.committer.class  ...BindingParquetOutputCommitter'],
+             ['d','removed: endpoint + 2 long-lived keys  ·  added: the S3A magic committer']], fx:'creds' },
+    ]
+  },
+  {
+    id:'s12', num:12, title:'Clean up & write the comparison', eyebrow:'STEP 12',
+    lede:'Remove the temporary objects — in a real account they cost money every month until deleted. Then write the comparison this whole lab exists to produce.',
+    teach:[
+      {ic:'🧹',html:'Orphaned scratch data is one of the largest lines on a typical cloud bill. Deleting <code>tmp/</code> and stopping the cluster are the two habits that keep costs honest.'},
+    ],
+    cmds:[
+      { id:'s12-clean', lbl:'Remove tmp/ & summarize', code:
+`s3 rm --recursive s3://bda-lake/tmp/
+s3 ls --recursive s3://bda-lake/ --summarize | tail -3`,
+        out:[['','delete: s3://bda-lake/tmp/many/ (200 objects)'],
+             ['','delete: s3://bda-lake/tmp/few/ (4 objects)'],
+             ['d','Total Objects: 7'],
+             ['t','Total Size: 1.1 GiB']], fx:'clean', need:'minio' },
+      { id:'s12-stop', lbl:'Stop Spark & MinIO', code:`spark.stop(); exit()\ndocker stop bda-minio`,
+        out:[['d','Spark session stopped'],
+             ['t','bda-minio'],
+             ['g','environment down \u2014 bill stops here']], fx:'shutdown' },
+    ],
+    deliverable:true
+  },
+];
+
+const ALL = SETUP.concat(STEPS);
+
+/* ============================================================
+   RENDER: nav
+   ============================================================ */
+function renderNav(){
+  const ns = document.getElementById('navSetup');
+  const nl = document.getElementById('navSteps');
+  ns.innerHTML=''; nl.innerHTML='';
+  SETUP.forEach(x=>ns.appendChild(navItem(x,x.num)));
+  STEPS.forEach(x=>nl.appendChild(navItem(x,x.num)));
+}
+function navItem(x,label){
+  const li=document.createElement('li');
+  li.className='nav-item'+(S.done[x.id]?' done':'')+(current===x.id?' active':'');
+  li.innerHTML=`<span class="nav-num"><span>${label}</span></span><span class="nav-title">${x.title}</span>`;
+  li.onclick=()=>select(x.id);
+  return li;
+}
+
+/* ============================================================
+   RENDER: step panel
+   ============================================================ */
+let current='aws';
+function stepById(id){ return ALL.find(x=>x.id===id); }
+
+function renderStep(){
+  const x=stepById(current);
+  const p=document.getElementById('stepPanel');
+  const isSetup = SETUP.includes(x);
+  let html=`<div class="step-head">
+    <div class="step-eyebrow ${isSetup?'setup':''}">${x.eyebrow}</div>
+    <h2>${x.title}</h2>
+    <p class="lede">${x.lede}</p></div><div class="step-body">`;
+
+  (x.teach||[]).forEach(t=>{
+    html+=`<div class="teach ${t.cls||''}"><span class="ic">${t.ic}</span><p>${t.html}</p></div>`;
+  });
+
+  if(x.special==='aws'){
+    const done=!!S.env.awsAcct;
+    html+=`<div style="text-align:center;padding:6px 0 2px">
+      <button class="btn btn-ghost" style="font-size:13px;padding:10px 20px" onclick="openAws()">${done?'✓ Account created — review':'Start sign-up'}</button>
+      ${done?`<p style="margin:12px 0 0;font-size:12px;color:var(--ink-3)">Account <code>${S.env.awsAcct}</code> created (simulated).</p>`:''}
+    </div>`;
+  }
+  if(x.special==='minio'){
+    html+=`<div style="text-align:center;padding:6px 0 2px">
+      <button class="btn btn-ghost" style="font-size:13px;padding:10px 20px" onclick="openMinio()">Open console → localhost:9001</button>
+      <p style="margin:12px 0 0;font-size:12px;color:var(--ink-3)">${S.env.minio?'MinIO is running — you can log in.':'Start MinIO in Step 1 first, or you\u2019ll get a connection error (as you would in real life).'}</p>
+    </div>`;
+  }
+
+  (x.cmds||[]).forEach(c=>{
+    const ran=S.done['cmd:'+c.id];
+    html+=`<div class="cmd">
+      <div class="cmd-bar">
+        <span class="lbl">${c.lbl}${c.tag?` <span class="tag ${c.tag}">${c.tag==='added'?'added for sim':'review only'}</span>`:''}</span>
+        <button class="btn btn-copy" onclick="copyCmd('${c.id}')">⧉ Copy</button>
+        <button class="btn btn-run" id="run-${c.id}" onclick="runCmd('${c.id}')" ${ran?'':''}>${ran?'↻ Run again':'▶ Run'}</button>
+      </div>
+      <pre id="code-${c.id}">${highlight(c.code)}</pre>
+    </div>`;
+  });
+
+  if(x.action){
+    html+=`<div style="margin:2px 0 14px"><button class="btn btn-ghost" style="font-size:13px;padding:9px 18px" onclick="${x.action.fn}()">${x.action.label}</button></div>`;
+  }
+
+  if(x.deliverable) html+=deliverableHtml();
+
+  // footer nav
+  const idx=ALL.indexOf(x);
+  const prev=ALL[idx-1], next=ALL[idx+1];
+  html+=`<div class="step-nav-btns">
+    <button class="btn btn-step" ${prev?'':'disabled'} onclick="${prev?`select('${prev.id}')`:''}">← ${prev?prev.title.slice(0,20):'Start'}</button>
+    ${(x.cmds&&x.cmds.length>1)?`<button class="btn btn-run-all" onclick="runAll('${x.id}')">▶▶ Run all in step</button>`:''}
+    <button class="btn btn-step" ${next?'':'disabled'} onclick="${next?`select('${next.id}')`:''}">${next?next.title.slice(0,20):'Done'} →</button>
+  </div>`;
+
+  html+='</div>';
+  p.innerHTML=html;
+  if(x.deliverable) wireDeliverable();
+}
+
+function deliverableHtml(){
+  const pts=[
+    'Transient vs always-on — your cost figures, and when always-on still wins',
+    'On-demand vs spot — which node groups you\u2019d put on spot, and why',
+    'EMR vs HDInsight vs serverless SQL for THIS job, with a recommendation',
+    'The three things that broke moving from HDFS to object storage',
+    'One sentence: what does the managed service NOT do for you?'
+  ];
+  return `<div class="teach" style="border-left-color:var(--ok);background:var(--ok-soft);border-color:var(--ok-line)">
+      <span class="ic">✍️</span><p><strong>Final deliverable (250–300 words).</strong> Cover all five points. Point 5 carries the most marks.</p></div>
+    <div class="deliv">
+      ${pts.map((t,i)=>`<label class="pt"><input type="checkbox" class="pt-chk"> <span>${i+1}. ${t}</span></label>`).join('')}
+      <textarea id="delivText" placeholder="Write your comparison here…"></textarea>
+      <div class="wc"><span id="wc">0 words · 0 / 5 points checked</span>
+        <button class="btn btn-copy" onclick="copyDeliv()">⧉ Copy write-up</button></div>
+    </div>`;
+}
+function wireDeliverable(){
+  const ta=document.getElementById('delivText');
+  const chks=[...document.querySelectorAll('.pt-chk')];
+  const upd=()=>{
+    const w=(ta.value.trim().match(/\S+/g)||[]).length;
+    const c=chks.filter(x=>x.checked).length;
+    const el=document.getElementById('wc');
+    el.textContent=`${w} words · ${c} / 5 points checked`;
+    el.className=(w>=250&&w<=320&&c===5)?'wc-ok':'';
+  };
+  ta.addEventListener('input',upd);
+  chks.forEach(c=>c.addEventListener('change',upd));
+}
+function copyDeliv(){ const t=document.getElementById('delivText').value; navigator.clipboard.writeText(t).then(()=>toast('Write-up copied')); }
+
+/* simple shell highlighter for the command preview */
+function highlight(code){
+  let h=esc(code);
+  h=h.replace(/(^|\n)(\s*#[^\n]*)/g,'$1<span class="cm">$2</span>');
+  h=h.replace(/\b(docker|aws|s3|spark-submit|pyspark|python3|export|alias|cat|chmod|mkdir|sudo|sleep|diff|az|pkill|echo|time|tail)\b/g,'<span class="kw">$1</span>');
+  h=h.replace(/\b(s3a?:\/\/[^\s'"]+)/g,'<span class="st">$1</span>');
+  return h;
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ============================================================
+   TERMINAL
+   ============================================================ */
+const term=document.getElementById('term');
+function cwdPrompt(){ return `${PROMPT.user}@${PROMPT.host}:${S.cwd}$`; }
+function termLine(html,cls=''){
+  const d=document.createElement('div');
+  d.className='ln '+cls; d.innerHTML=html;
+  term.appendChild(d); term.scrollTop=term.scrollHeight;
+}
+function echoCommand(code){
+  const lines=code.split('\n');
+  lines.forEach((l,i)=>{
+    if(i===0) termLine(`<span class="prompt"><span class="u">${esc(cwdPrompt())}</span> <span class="cmd">${esc(l)}</span></span>`);
+    else termLine(`<span class="d">&gt; ${esc(l)}</span>`);
+  });
+}
+function outLine(spec){
+  // spec = [cls, text, isPrompt?, typedAnswer?]
+  const [cls,text,isPrompt,ans]=spec;
+  if(isPrompt){
+    termLine(`<span class="d">${esc(text)}</span><span class="b">${esc(ans||'')}</span>`);
+  } else {
+    termLine(esc(text), cls);
+  }
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+let busy=false;
+async function streamOut(out){
+  for(const spec of out){ outLine(spec); await sleep(Math.max(40,220-out.length*12)); }
+}
+
+document.getElementById('termClear').onclick=()=>{ term.innerHTML=''; welcome(); };
+function welcome(){
+  termLine('<span class="d"># Big Data Lab — local environment. Use the ▶ Run buttons above, or type a command.</span>');
+  termLine('<span class="d"># try: help · ls · s3 ls s3://bda-lake · clear</span>');
+}
+
+/* free-type input (recognizes a few commands for realism) */
+const input=document.getElementById('termInput');
+input.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||busy) return;
+  const v=input.value.trim(); input.value='';
+  if(!v) return;
+  termLine(`<span class="prompt"><span class="u">${esc(cwdPrompt())}</span> <span class="cmd">${esc(v)}</span></span>`);
+  handleTyped(v);
+});
+function handleTyped(v){
+  const c=v.toLowerCase();
+  if(c==='clear'){ term.innerHTML=''; welcome(); return; }
+  if(c==='help'){
+    ['Available in this simulator:',
+     '  help                     show this message',
+     '  ls                       list local ~/lab8 files',
+     '  s3 ls s3://bda-lake      list objects in the lake',
+     '  pwd                      print working directory',
+     '  clear                    clear the screen',
+     'Everything else: use the ▶ Run buttons — the lab commands are pre-written.'
+    ].forEach((l,i)=>termLine(esc(l), i===0?'a':'d')); return;
+  }
+  if(c==='pwd'){ termLine(S.cwd.replace('~','/home/student'),''); return; }
+  if(c==='ls'){
+    if(!S.local.length){ termLine('<span class="d">(no files yet in ~/lab8)</span>'); return; }
+    termLine(S.local.map(f=>f.name).join('   '),'t'); return;
+  }
+  if(c.startsWith('s3 ls')){
+    if(!S.env.minio){ termLine('Could not connect to the endpoint URL: "http://localhost:9000"','r'); termLine('<span class="d">start MinIO first (Step 1)</span>'); return; }
+    if(!S.files.length){ termLine('<span class="d">(bucket empty)</span>'); return; }
+    S.files.forEach(f=>termLine(`<span class="d">2026-10-26 09:14  ${human(f.size).padStart(9)} </span>${esc(f.path)}`));
+    return;
+  }
+  termLine(`${esc(v.split(' ')[0])}: command not found`,'r');
+  termLine('<span class="d">this is a simulator — use the ▶ Run buttons, or type: help</span>');
+}
+
+/* ============================================================
+   RUN COMMANDS
+   ============================================================ */
+function findCmd(id){ for(const x of ALL){ for(const c of (x.cmds||[])) if(c.id===id) return {x,c}; } }
+
+async function runCmd(id){
+  if(busy) return;
+  const {x,c}=findCmd(id);
+  if(c.need==='minio'&&!S.env.minio){ cannot('MinIO isn\u2019t running. Run Step 1 first.'); return; }
+  if(c.need==='curated'&&!S.files.some(f=>f.path.startsWith('curated/'))){ cannot('No curated data yet. Run Step 5 first.'); return; }
+  busy=true; setRunning(true);
+  const btn=document.getElementById('run-'+id); if(btn){btn.disabled=true;}
+  // change cwd for lab8 steps
+  if(/cd ~\/lab8/.test(c.code)) S.cwd='~/lab8';
+  echoCommand(c.code);
+  await sleep(300);
+  await streamOut(c.out);
+  applyEffect(c.fx);
+  S.done['cmd:'+id]=true;
+  maybeComplete(x);
+  busy=false; setRunning(false);
+  renderStep(); renderNav(); save();
+}
+function cannot(msg){ echoCommandRaw('(blocked)'); termLine(msg,'r'); }
+function echoCommandRaw(t){ termLine(`<span class="prompt"><span class="u">${esc(cwdPrompt())}</span> <span class="cmd">${esc(t)}</span></span>`); }
+function setRunning(on){ document.querySelectorAll('.btn-run,.btn-run-all,.btn-ghost').forEach(b=>{ if(on)b.classList.add('_wasEnabled'); b.disabled=on; }); }
+
+async function runAll(stepId){
+  if(busy) return;
+  const x=stepById(stepId);
+  for(const c of x.cmds){ await runCmd(c.id); await sleep(250); }
+}
+
+function maybeComplete(x){
+  if(!x.cmds||!x.cmds.length){ return; }
+  const all=x.cmds.every(c=>S.done['cmd:'+c.id]);
+  if(all) S.done[x.id]=true;
+  // setup items with special
+  if(x.special==='aws'&&S.env.awsAcct) S.done[x.id]=true;
+  if(x.special==='minio'&&S.env.minioSeen) S.done[x.id]=true;
+  updateProgress();
+}
+
+function copyCmd(id){ const {c}=findCmd(id); navigator.clipboard.writeText(c.code).then(()=>toast('Command copied')); }
+
+/* ============================================================
+   EFFECTS → mutate state + update panels
+   ============================================================ */
+function addFiles(list){ list.forEach(f=>{ if(!S.files.some(e=>e.path===f.path)) S.files.push({...f,isNew:true}); }); renderStore(true); }
+function addLocal(list){ list.forEach(f=>{ if(!S.local.some(e=>e.name===f.name)) S.local.push(f); }); }
+
+function applyEffect(fx){
+  switch(fx){
+    case 'docker': S.env.docker=true; break;
+    case 'cli': S.env.cli=true; S.env.region='us-east-1'; break;
+    case 'minio-up': S.env.minio=true; break;
+    case 'gen-events': addLocal([{name:'~/lab3/events.json',note:'1.1 GiB'}]); break;
+    case 'load-raw': S.bucketCreated=true; addFiles([{path:'raw/events/events.json',size:1181116000}]); break;
+    case 'mk-bootstrap': S.cwd='~/lab8'; addLocal([{name:'bootstrap.sh'}]); break;
+    case 'up-bootstrap': addFiles([{path:'scripts/bootstrap.sh',size:612}]); break;
+    case 'mk-job': addLocal([{name:'daily_rollup.py'}]); break;
+    case 'up-job': addFiles([{path:'scripts/daily_rollup.py',size:948}]); break;
+    case 'mk-conf': addLocal([{name:'s3.conf'}]); break;
+    case 'run-job':
+      S.runtime=0.75;
+      addFiles([
+        {path:'curated/daily_rollup/day=2026-10-20/part-0000.parquet',size:28200000},
+        {path:'curated/daily_rollup/day=2026-10-21/part-0000.parquet',size:27850000},
+        {path:'curated/daily_rollup/day=2026-10-22/part-0000.parquet',size:28010000},
+      ]);
+      break;
+    case 'disposable': S.cluster.proven=true; break;
+    case 'cost': computeCost(); renderCost(true); break;
+    case 'commit':
+      addFiles([
+        {path:'tmp/many/',size:28000000,count:200},
+        {path:'tmp/few/',size:28000000,count:4},
+      ]); break;
+    case 'mk-emr': addLocal([{name:'launch_emr.sh'}]); break;
+    case 'mk-hdi': addLocal([{name:'launch_hdinsight.sh'}]); break;
+    case 'creds': S.env.credsRemoved=true; addLocal([{name:'s3-prod.conf'}]); break;
+    case 'clean': S.files=S.files.filter(f=>!f.path.startsWith('tmp/')); renderStore(true); break;
+    case 'shutdown': S.env.minio=false; renderStore(); break;
+  }
+  renderEnv(); renderStore(); renderCluster();
+}
+
+/* cost */
+function computeCost(){
+  const RUNTIME=0.75,CORE=4,PRIMARY=1,OD=0.214,UPLIFT=0.054,SPOT=0.70,GB=20;
+  const ih=(CORE+PRIMARY)*RUNTIME;
+  const od=ih*OD+ih*UPLIFT;
+  const spot=PRIMARY*RUNTIME*OD + CORE*RUNTIME*OD*(1-SPOT) + ih*UPLIFT;
+  const srv=GB*0.005;
+  const forgot=(CORE+PRIMARY)*24*7*(OD+UPLIFT);
+  const egress=GB*0.09;
+  S.cost={od,spot,srv,forgot,egress,pct:Math.round((1-spot/od)*100)};
+}
+
+/* ============================================================
+   RENDER: environment chips
+   ============================================================ */
+function renderEnv(){
+  chip('chDocker', S.env.docker, 'Docker');
+  chip('chMinio', S.env.minio, 'MinIO'+(S.env.minio?' · up':''), S.env.minio?'MinIO · up':'MinIO');
+  chip('chCli', S.env.cli, 'AWS CLI');
+  const rg=document.getElementById('chRegion');
+  rg.className='chip'+(S.env.region?' on':''); rg.innerHTML=`<i class="dot"></i>${S.env.region||'no region'}`;
+  const cc=document.getElementById('chCost');
+  cc.innerHTML=`<i class="dot"></i>Session $${S.sessionCost.toFixed(2)}`;
+  cc.className='chip cost'+(S.cluster.active?' run':'');
+}
+function chip(id,on,label,label2){ const e=document.getElementById(id); e.className='chip'+(on?' on':''); e.innerHTML=`<i class="dot"></i>${label2||label}`; }
+
+/* ============================================================
+   RENDER: storage
+   ============================================================ */
+function renderStore(flash){
+  const body=document.getElementById('storeBody');
+  document.getElementById('storeUrl').textContent = S.bucketCreated?'s3://bda-lake':'(no bucket)';
+  if(!S.files.length && !S.local.length){
+    body.innerHTML=`<div class="empty-note">No objects yet.<br>Run Step 1 to create the bucket.</div>`+localBlock();
+    foot(); return;
+  }
+  // build tree
+  const tree={};
+  S.files.forEach(f=>{
+    const parts=f.path.replace(/\/$/,'').split('/');
+    let node=tree;
+    parts.forEach((p,i)=>{
+      const leaf=i===parts.length-1;
+      node[p]=node[p]||{__children:{},__leaf:leaf,__size:leaf?f.size:0,__count:leaf?f.count:0,__isnew:f.isNew};
+      if(leaf){ node[p].__size=f.size; node[p].__count=f.count; node[p].__isnew=f.isNew; }
+      node=node[p].__children;
+    });
+  });
+  const zones=['raw','curated','results','scripts','tmp'];
+  let rows='';
+  function walk(node,depth,parentKey){
+    const keys=Object.keys(node).sort((a,b)=>{
+      const az=depth===0?zones.indexOf(a):0, bz=depth===0?zones.indexOf(b):0;
+      if(depth===0) return (az<0?99:az)-(bz<0?99:bz);
+      return a.localeCompare(b);
+    });
+    keys.forEach(k=>{
+      const n=node[k], isZone=depth===0;
+      const ind=depth>0?`ind${Math.min(depth,3)}`:'';
+      const icon=n.__leaf?'📄':(isZone?'📁':'📂');
+      let right='';
+      if(n.__leaf){
+        right = n.__count ? `<span class="badge">${n.__count} objects</span>` : `<span class="sz">${human(n.__size)}</span>`;
+      }
+      rows+=`<div class="node ${isZone?'zone':''} ${ind} ${n.__isnew?'isnew':''}"><span>${icon}</span><span class="nm">${esc(k)}${n.__leaf?'':'/'}</span>${right}</div>`;
+      if(!n.__leaf) walk(n.__children,depth+1,k);
+    });
+  }
+  rows=`<div class="node zone"><span>🪣</span><span class="nm">bda-lake/</span></div>`;
+  walk(tree,0,'');
+  body.innerHTML=`<div class="tree">${rows}</div>`+localBlock();
+  // clear isNew flags after paint
+  setTimeout(()=>{ S.files.forEach(f=>f.isNew=false); },1800);
+  foot();
+  if(flash){ document.querySelector('.card-head.store').classList.remove('flash'); void document.querySelector('.card-head.store').offsetWidth; document.querySelector('.card-head.store').classList.add('flash'); }
+}
+function localBlock(){
+  if(!S.local.length) return `<div class="local-head">Local workspace · ~/lab8</div><div class="local-empty">empty</div>`;
+  return `<div class="local-head">Local workspace · ~/lab8</div><ul class="local-list">`+
+    S.local.map(f=>`<li><span>·</span><span class="f">${esc(f.name.replace('~/lab8/','').replace('~/',''))}</span>${f.note?`<span class="n">${f.note}</span>`:''}</li>`).join('')+`</ul>`;
+}
+function foot(){
+  const n=S.files.reduce((a,f)=>a+(f.count||1),0);
+  const sz=S.files.reduce((a,f)=>a+(f.size||0),0);
+  document.getElementById('storeCount').textContent=`${n} object${n===1?'':'s'}`;
+  document.getElementById('storeSize').textContent=human(sz);
+}
+function human(b){ if(!b) return '0 B'; const u=['B','KiB','MiB','GiB','TiB']; let i=Math.floor(Math.log(b)/Math.log(1024)); i=Math.min(i,u.length-1); return (b/Math.pow(1024,i)).toFixed(i?1:0)+' '+u[i]; }
+
+/* ============================================================
+   RENDER: cluster lifecycle
+   ============================================================ */
+const STAGES=[
+  {b:'Request',s:'create-cluster submitted'},
+  {b:'Provisioning',s:'~5–8 min · instances boot'},
+  {b:'Bootstrap',s:'install deps on every node'},
+  {b:'Step: rollup',s:'spark-submit runs the job'},
+  {b:'Auto-terminate',s:'cluster shuts down'},
+  {b:'Done',s:'results in S3 · bill stops'},
+];
+function renderCluster(){
+  const body=document.getElementById('clusterBody');
+  const c=S.cluster;
+  let stateCls='', stateTxt='Idle — no cluster running';
+  if(c.active){ stateCls='live'; stateTxt='● CLUSTER RUNNING — billing'; }
+  else if(c.terminated){ stateCls='gone'; stateTxt='✓ Terminated — cost stopped, data safe in S3'; }
+  let html=`<div class="cluster-state ${stateCls}">${stateTxt}</div><div class="pipe">`;
+  STAGES.forEach((st,i)=>{
+    let cls='';
+    if(c.stageIndex>i) cls='done';
+    else if(c.stageIndex===i) cls=(i===4?'term':'active');
+    if(c.terminated&&i>=4) cls='done';
+    html+=`<div class="stage ${cls}"><span class="dot"></span><span class="txt"><b>${st.b}</b><small>${st.s}</small></span></div>`;
+  });
+  html+='</div>';
+  body.innerHTML=html;
+}
+let costTimer=null;
+async function simulateCluster(){
+  if(busy||S.cluster.active) return;
+  busy=true;
+  S.cluster={active:true,terminated:false,stageIndex:0};
+  echoCommandRaw('bash launch_emr.sh   # simulated dry-run');
+  termLine('<span class="v">▶ simulating transient cluster lifecycle…</span>');
+  renderCluster(); renderEnv();
+  const notes=[
+    ['request','Cluster j-2BDA7XYZ requested (emr-7.1.0, 5 × m5.xlarge)','b'],
+    ['provision','Provisioning instances… STARTING → BOOTSTRAPPING','d'],
+    ['bootstrap','bootstrap.sh: deps ok 2.2.2 on all 5 nodes','t'],
+    ['step','[job] read 4000000 rows → wrote 2184 rows to curated/','b'],
+    ['terminate','Step complete · ActionOnFailure respected · auto-terminating','a'],
+    ['done','State: TERMINATED · results safe in S3 · instance bill ends','g'],
+  ];
+  // ticking cost while running
+  S.sessionCost=0; renderEnv();
+  costTimer=setInterval(()=>{ if(S.cluster.active){ S.sessionCost+=0.004; renderEnv(); } },120);
+  for(let i=0;i<STAGES.length;i++){
+    S.cluster.stageIndex=i; renderCluster();
+    termLine(`<span class="d">[${STAGES[i].b}]</span> <span class="${notes[i][2]}">${esc(notes[i][1])}</span>`);
+    await sleep(i===1?1600:1100);
+  }
+  clearInterval(costTimer);
+  S.cluster.active=false; S.cluster.terminated=true; S.cluster.stageIndex=STAGES.length;
+  renderCluster();
+  const final=S.sessionCost;
+  termLine(`<span class="g">✓ run cost ≈ $${final.toFixed(2)} · meter stopped the moment the cluster died</span>`);
+  await sleep(400);
+  S.sessionCost=0; renderEnv(); // bill stops
+  termLine('<span class="d"># exactly the point: no cluster, no bill. The data outlived the compute.</span>');
+  S.done['cmd:sim-cluster']=true;
+  busy=false; save();
+}
+
+/* ============================================================
+   RENDER: cost
+   ============================================================ */
+function renderCost(animate){
+  const body=document.getElementById('costBody');
+  if(!S.cost){ body.innerHTML=`<div class="cost-empty">Run Step 7 to compute<br>the cost of one job.</div>`; return; }
+  const c=S.cost, max=Math.max(c.od,c.spot,c.srv)*1.1;
+  body.innerHTML=`<ul class="cost-rows">
+    <li><div class="cl"><span>EMR on-demand</span><span class="v">$${c.od.toFixed(2)}</span></div><div class="meter m-od"><i data-w="${pct(c.od,max)}"></i></div></li>
+    <li><div class="cl"><span>Core on spot <span class="pct">−${c.pct}%</span></span><span class="v">$${c.spot.toFixed(2)}</span></div><div class="meter m-spot"><i data-w="${pct(c.spot,max)}"></i></div></li>
+    <li><div class="cl"><span>Serverless SQL</span><span class="v">$${c.srv.toFixed(2)}</span></div><div class="meter m-srv"><i data-w="${pct(c.srv,max)}"></i></div></li>
+  </ul>
+  <div class="forgot"><div class="cl"><span>⚠ Forgotten 7 days</span><span class="v">$${c.forgot.toFixed(2)}</span></div><div class="meter"><i></i></div>
+    <small>${Math.round(c.forgot/c.od)}× one run. This is why every cluster gets <code>--auto-terminate</code>.</small></div>
+  <div style="margin-top:9px;font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">+ egress to laptop: $${c.egress.toFixed(2)} (keep compute in-region)</div>`;
+  const set=()=>document.querySelectorAll('.cost-rows .meter>i').forEach(i=>i.style.width=i.dataset.w+'%');
+  if(animate){ requestAnimationFrame(()=>requestAnimationFrame(set)); document.querySelector('.card-head.cost').classList.add('flash'); setTimeout(()=>document.querySelector('.card-head.cost').classList.remove('flash'),1100);}
+  else set();
+}
+function pct(v,max){ return Math.max(3,Math.round(v/max*100)); }
+
+/* ============================================================
+   AWS signup wizard (simulated)
+   ============================================================ */
+let awsScreen=0;
+function openAws(){ awsScreen=0; renderAws(); document.getElementById('awsOverlay').classList.add('show'); }
+function renderAws(){
+  const b=document.getElementById('awsBody'), f=document.getElementById('awsFoot'), t=document.getElementById('awsTitle');
+  const banner=`<div class="sim-banner"><span>🔒</span><span>Simulation only. No account is created, no card is charged. The lab runs entirely on local MinIO.</span></div>`;
+  if(awsScreen===0){
+    t.textContent='Create an AWS account';
+    b.innerHTML=banner+`
+      <div class="field"><label>Root user email address</label><input id="aw-email" placeholder="you@example.com" value=""></div>
+      <div class="field"><label>AWS account name</label><input id="aw-name" placeholder="bda-lab-personal"></div>`;
+    f.innerHTML=dots(0)+`<button class="btn-primary" onclick="awsNext()">Verify email →</button>`;
+  } else if(awsScreen===1){
+    t.textContent='Secure your account';
+    b.innerHTML=banner+`
+      <div class="field"><label>Root password</label><input type="password" id="aw-pw" placeholder="••••••••••" value="demo-password"></div>
+      <div class="field"><label>Confirm password</label><input type="password" placeholder="••••••••••" value="demo-password"></div>`;
+    f.innerHTML=dots(1)+`<button class="btn-primary" onclick="awsNext()">Continue →</button>`;
+  } else if(awsScreen===2){
+    t.textContent='Billing information';
+    b.innerHTML=banner+`
+      <div class="field"><label>Card number</label><input placeholder="4242 4242 4242 4242" value="4242 4242 4242 4242"></div>
+      <div class="field"><div class="row2"><div><label>Expiry</label><input value="12/30"></div><div><label>CVC</label><input value="123"></div></div></div>
+      <p style="font-size:11px;color:var(--ink-3);margin:0">Dummy values — nothing is submitted anywhere.</p>`;
+    f.innerHTML=dots(2)+`<button class="btn-primary" onclick="awsNext()">Create account →</button>`;
+  } else {
+    const id='4071'+Math.floor(1000+Math.random()*8999)+''+Math.floor(1000+Math.random()*8999);
+    S.env.awsAcct=id.slice(0,12).replace(/(\d{4})(\d{4})(\d{4})/,'$1-$2-$3');
+    t.textContent='Account ready';
+    b.innerHTML=`<div class="aws-done"><div class="big">✅</div><h4>Your (simulated) AWS account is ready</h4>
+      <p>You could now open the EMR and S3 consoles.</p>
+      <p style="color:var(--ink-3);font-size:12px">For this lab, you don\u2019t need to — everything runs on local MinIO.</p>
+      <span class="acct">Account ID: ${S.env.awsAcct}</span></div>`;
+    f.innerHTML=`<span style="font-size:11px;color:var(--ink-3)">Nothing was charged.</span><button class="btn-primary" onclick="closeAws()">Done</button>`;
+    S.done['aws']=true; renderNav(); renderEnv(); updateProgress(); save();
+  }
+}
+function dots(n){ return `<div class="m-dots">${[0,1,2].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>`; }
+function awsNext(){ awsScreen++; renderAws(); }
+function closeAws(){ document.getElementById('awsOverlay').classList.remove('show'); renderStep(); }
+
+/* ============================================================
+   MinIO console (simulated)
+   ============================================================ */
+function openMinio(){
+  if(!S.env.minio){ renderMinioError(); }
+  else { renderMinioLogin(); }
+  document.getElementById('minioOverlay').classList.add('show');
+}
+function renderMinioError(){
+  document.getElementById('minioBody').innerHTML=`
+    <div class="minio-login">
+      <div class="minio-brand">MinIO<small>Object Store Console</small></div>
+      <div class="minio-err show">⚠ localhost refused to connect (ERR_CONNECTION_REFUSED).<br>The MinIO server isn\u2019t running yet — run Step 1 to start it.</div>
+      <p style="font-size:12px;color:var(--ink-3)">This is exactly what you\u2019d see in a real browser before the container is up.</p>
+    </div>`;
+}
+function renderMinioLogin(){
+  document.getElementById('minioBody').innerHTML=`
+    <div class="minio-login">
+      <div class="minio-brand">MinIO<small>Console · http://localhost:9001</small></div>
+      <div class="minio-err" id="mErr">Invalid credentials. Try minioadmin / minioadmin.</div>
+      <div class="field"><label>Username</label><input id="mUser" value="minioadmin"></div>
+      <div class="field"><label>Password</label><input id="mPass" type="password" value="minioadmin"></div>
+      <button class="btn-primary" style="width:100%;margin-top:4px" onclick="minioLogin()">Log in</button>
+    </div>`;
+}
+function minioLogin(){
+  const u=document.getElementById('mUser').value, p=document.getElementById('mPass').value;
+  if(u!=='minioadmin'||p!=='minioadmin'){ document.getElementById('mErr').classList.add('show'); return; }
+  S.env.minioSeen=true; S.done['minio']=true; renderNav(); updateProgress(); save();
+  renderMinioConsole();
+}
+function renderMinioConsole(){
+  const sz=S.files.reduce((a,f)=>a+(f.size||0),0);
+  const n=S.files.reduce((a,f)=>a+(f.count||1),0);
+  let objs = S.files.length? S.files.map(f=>`<div class="node ${f.path.split('/').length<=2?'zone':''} ind1"><span>${f.path.endsWith('/')?'📂':'📄'}</span><span class="nm">${esc(f.path)}</span>${f.count?`<span class="badge">${f.count}</span>`:`<span class="sz">${human(f.size)}</span>`}</div>`).join('')
+    : `<div class="empty-note">Bucket is empty. Load data in Step 1.</div>`;
+  document.getElementById('minioBody').innerHTML=`
+    <div class="minio-console">
+      <div class="mc-top"><span>🖥️</span><span class="url">http://localhost:9001 / Object Browser</span><span class="live"><span class="dot"></span>connected</span></div>
+      <div class="mc-bucket"><div class="bh"><span>🪣</span><span>bda-lake</span><span class="usage">${n} objects · ${human(sz)}</span></div>
+        <div style="padding:8px 12px;max-height:280px;overflow:auto"><div class="tree">${objs}</div></div></div>
+      <p style="font-size:11.5px;color:var(--ink-3);margin:12px 0 0">This mirrors the right-hand storage panel. Re-open it anytime to watch the bucket fill as you run commands.</p>
+    </div>`;
+}
+
+/* ============================================================
+   boilerplate: progress / toast / reset / persist
+   ============================================================ */
+function updateProgress(){
+  const total=ALL.length;
+  const done=ALL.filter(x=>S.done[x.id]).length;
+  document.getElementById('progTxt').textContent=`${done} / ${total}`;
+  document.getElementById('progBar').style.width=(done/total*100)+'%';
+}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1600); }
+
+function select(id){ current=id; renderStep(); renderNav(); document.getElementById('stepPanel').scrollIntoView({behavior:'smooth',block:'start'}); }
+
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).classList.remove('show'));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
+
+document.getElementById('btnReset').onclick=()=>{
+  if(!confirm('Reset the simulator? All progress, files and the terminal will be cleared.')) return;
+  state=S=freshState(); term.innerHTML=''; welcome();
+  current='aws'; try{localStorage.removeItem('bda-sim');}catch(e){}
+  renderAllPanels(); toast('Simulator reset');
+};
+
+function save(){ try{ localStorage.setItem('bda-sim', JSON.stringify({done:S.done,env:S.env,files:S.files,local:S.local,bucketCreated:S.bucketCreated,cost:S.cost,cluster:{terminated:S.cluster.terminated,stageIndex:S.cluster.terminated?STAGES.length:-1,active:false},runtime:S.runtime})); }catch(e){} }
+function load(){
+  try{ const r=localStorage.getItem('bda-sim'); if(!r) return false; const d=JSON.parse(r);
+    S=state=freshState(); Object.assign(S,d); if(!S.cluster) S.cluster=freshState().cluster;
+    return true;
+  }catch(e){ return false; }
+}
+
+function renderAllPanels(){ renderNav(); renderStep(); renderEnv(); renderStore(); renderCluster(); renderCost(); updateProgress(); }
+
+/* ---------- init ---------- */
+state=S=freshState();
+const had=load();
+renderAllPanels();
+welcome();
+if(had){ termLine('<span class="d"># restored previous session — run ↻ to replay a step, or ↺ Reset to start fresh.</span>'); }
+</script>
+</body>
+</html>

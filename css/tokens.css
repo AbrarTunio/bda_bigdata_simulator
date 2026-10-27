@@ -1,0 +1,35 @@
+/* ============================================================
+   tokens.css — the single source of truth for colour, radius,
+   elevation and motion. Change a value here and it propagates
+   through every other stylesheet.
+   ============================================================ */
+:root{
+  /* surfaces */
+  --bg:#eaeff4; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef3f8;
+  --border:#d7e0ea; --border-strong:#bfccda;
+
+  /* ink */
+  --ink:#152233; --ink-2:#44566b; --ink-3:#6c7e92; --muted:#90a0b2;
+
+  /* semantic families — storage is teal, compute is indigo */
+  --storage:#0e7c86; --storage-soft:#d4eef0; --storage-line:#9ad7db;
+  --compute:#4f46e5; --compute-soft:#e5e3fb; --compute-line:#c4bffb;
+  --warn:#b45309;    --warn-soft:#fbe8d0;    --warn-line:#efc488;
+  --ok:#157a3c;      --ok-soft:#d6efdf;      --ok-line:#9fd6b2;
+  --danger:#be123c;  --danger-soft:#fbdbe3;
+
+  /* terminal */
+  --term-bg:#eff4f9; --term-ink:#243244; --term-dim:#7488a0;
+  --term-green:#0f7a3d; --term-red:#c01f45; --term-blue:#2b4acb;
+  --term-teal:#0b7680; --term-amber:#9a5a05; --term-violet:#5b3fd6;
+
+  /* geometry + elevation */
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 1px 2px rgba(21,34,51,.05), 0 8px 24px -16px rgba(21,34,51,.22);
+
+  /* type stacks */
+  --font-sans:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+
+  color-scheme: light;
+}

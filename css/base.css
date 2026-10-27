@@ -1,0 +1,26 @@
+/* ============================================================
+   base.css — reset, document shell, shared typography.
+   ============================================================ */
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:14px; line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,.mono{font-family:var(--font-mono)}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.01em}
+a{color:var(--storage)}
+::selection{background:#bfe6e9}
+
+/* fills the notch area behind the sticky header */
+body::before{
+  content:"";position:fixed;inset:0 0 auto;
+  height:env(safe-area-inset-top,0px);background:var(--surface);z-index:60;
+}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
